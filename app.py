@@ -8,7 +8,7 @@ import pandas as pd
 # page config + theme
 st.set_page_config(
     page_title="IT Vectura — подготовка к CeMAT",
-    page_icon=None,
+    page_icon="LMAOOO",
     layout="wide",
     initial_sidebar_state="expanded",
 )
@@ -77,6 +77,20 @@ st.markdown(f"""
     .stButton button:hover {{ border-color: {BRAND_BLUE}; color: {BRAND_BLUE}; }}
 
     div[data-testid="stExpander"] {{ border: 1px solid {LINE}; border-radius: 4px; }}
+
+    /* hide default Streamlit chrome — looks like a real product, not a template */
+    #MainMenu {{ visibility: hidden; }}
+    footer {{ visibility: hidden; }}
+    header[data-testid="stHeader"] {{ display: none; }}
+    .stAppDeployButton {{ display: none; }}
+
+    /* mobile */
+    @media (max-width: 640px) {{
+        .block-container {{ padding-left: 1rem; padding-right: 1rem; padding-top: 1.4rem; }}
+        .pitch-box {{ padding: 18px 20px; font-size: 15px; }}
+        .case-card {{ padding: 14px 16px; }}
+        h1 {{ font-size: 1.5rem !important; }}
+    }}
 </style>
 """, unsafe_allow_html=True)
 
@@ -278,7 +292,7 @@ page = st.sidebar.radio(
         "01 · Питч",
         "02 · О компании",
         "03 · Продукты",
-        "04 · Как это работает",
+        "04 · Архитектура процесса",
         "05 · Кейсы",
         "06 · Возражения",
         "07 · Глоссарий",
@@ -330,8 +344,8 @@ elif page == "03 · Продукты":
                 for f in p["features"]:
                     st.markdown(f"- {f}")
 
-elif page == "04 · Как это работает":
-    st.title("Как это работает вместе — на одном примере")
+elif page == "04 · Архитектура процесса":
+    st.title("Архитектура процесса")
     steps = [
         ("1. Заказ появляется → TMS решает, как везти",
          "Заказ создаётся в учётной системе клиента и прилетает в TMS. Routing строит маршрут "
