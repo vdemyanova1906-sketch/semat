@@ -1,21 +1,11 @@
-"""
-IT Vectura — подготовка к выставке CeMAT
-Интерактивный дашборд на Streamlit (чистый Python, без JavaScript).
-
-Запуск:
-    pip install streamlit
-    streamlit run app.py
-
-Откроется на http://localhost:8501
-"""
+# app.py — internal prep tool for CeMAT booth duty
+# run: streamlit run app.py
 
 import random
 import streamlit as st
 import pandas as pd
 
-# --------------------------------------------------------------------------
-# НАСТРОЙКА СТРАНИЦЫ И СТИЛЕЙ
-# --------------------------------------------------------------------------
+# page config + theme
 st.set_page_config(
     page_title="IT Vectura — подготовка к CeMAT",
     page_icon=None,
@@ -27,40 +17,71 @@ BRAND_NAVY = "#0B2A3D"
 BRAND_BLUE = "#01426A"
 BRAND_AMBER = "#E8952E"
 BRAND_AMBER_LIGHT = "#FCEBD3"
+INK = "#1B2530"
+MUTED = "#5B6B78"
+LINE = "#E1E6EA"
 
 st.markdown(f"""
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
+    html, body, [class*="css"] {{ font-family: 'Inter', sans-serif; }}
+    h1, h2, h3 {{ font-family: 'Space Grotesk', sans-serif; color: {BRAND_BLUE}; letter-spacing: -0.01em; }}
+
     .stApp {{ background-color: #F3F5F7; }}
+    .block-container {{ padding-top: 2.2rem; max-width: 1080px; }}
+
     section[data-testid="stSidebar"] {{ background-color: {BRAND_NAVY}; }}
     section[data-testid="stSidebar"] * {{ color: #E7EEF3; }}
-    h1, h2, h3 {{ color: {BRAND_BLUE}; }}
+    section[data-testid="stSidebar"] .stMarkdown h2 {{
+        font-family: 'Space Grotesk', sans-serif; color: #fff; letter-spacing: 0.02em;
+        border-bottom: 1px solid rgba(255,255,255,0.14); padding-bottom: 14px;
+    }}
+    section[data-testid="stSidebar"] [role="radiogroup"] label {{
+        border-radius: 8px; padding: 2px 6px; transition: background 0.12s ease;
+    }}
+    section[data-testid="stSidebar"] [role="radiogroup"] label:hover {{
+        background: rgba(255,255,255,0.06);
+    }}
+
+    /* content blocks */
     .pitch-box {{
-        background: {BRAND_BLUE}; color: #fff; padding: 24px 28px;
-        border-radius: 12px; font-size: 17px; line-height: 1.6;
+        background: {BRAND_BLUE}; color: #fff; padding: 26px 30px;
+        border-radius: 4px; border-left: 4px solid {BRAND_AMBER};
+        font-size: 16.5px; line-height: 1.65;
     }}
     .tip-box {{
-        background: {BRAND_AMBER_LIGHT}; border-left: 4px solid {BRAND_AMBER};
-        padding: 14px 18px; border-radius: 0 8px 8px 0; font-size: 14.5px; color: #5A4319;
-        margin-top: 12px;
+        background: {BRAND_AMBER_LIGHT}; border-left: 3px solid {BRAND_AMBER};
+        padding: 14px 18px; font-size: 14px; color: #5A4319; margin-top: 14px;
     }}
     .fact-card {{
-        background: #fff; border: 1px solid #E1E6EA; border-radius: 10px;
-        padding: 14px 18px; margin-bottom: 10px;
+        background: #fff; border: 1px solid {LINE}; border-left: 3px solid {BRAND_BLUE};
+        padding: 13px 18px; margin-bottom: 9px;
     }}
-    .fact-card .k {{ font-size: 12px; color: #5B6B78; font-weight: 600; }}
-    .fact-card .v {{ font-size: 15px; margin-top: 4px; }}
+    .fact-card .k {{
+        font-size: 11px; color: {MUTED}; font-weight: 600; letter-spacing: 0.06em;
+    }}
+    .fact-card .v {{ font-size: 15px; margin-top: 3px; color: {INK}; }}
     .case-card {{
-        background: #fff; border: 1px solid #E1E6EA; border-radius: 10px;
-        padding: 18px 20px; margin-bottom: 14px;
+        background: #fff; border: 1px solid {LINE}; padding: 18px 22px 20px; margin-bottom: 14px;
     }}
-    .case-role {{ font-size: 12px; color: {BRAND_AMBER}; font-weight: 700; text-transform: uppercase; }}
+    .case-role {{
+        font-size: 11px; color: {BRAND_AMBER}; font-weight: 700;
+        text-transform: uppercase; letter-spacing: 0.08em;
+    }}
+
+    /* buttons: flatten the default Streamlit look */
+    .stButton button {{
+        border-radius: 4px; border: 1px solid {LINE}; font-weight: 500;
+    }}
+    .stButton button:hover {{ border-color: {BRAND_BLUE}; color: {BRAND_BLUE}; }}
+
+    div[data-testid="stExpander"] {{ border: 1px solid {LINE}; border-radius: 4px; }}
 </style>
 """, unsafe_allow_html=True)
 
 
-# --------------------------------------------------------------------------
-# ДАННЫЕ (всё в обычных Python-структурах — списках и словарях)
-# --------------------------------------------------------------------------
+# --- data ---
 PRODUCTS = [
     {"name": "TMS — управление транспортом", "tag": "Флагман, готов к продаже",
      "desc": "Заказ → планирование → исполнение → расчёты. Любые виды перевозок.",
@@ -119,7 +140,7 @@ PRODUCTS = [
 
 COMPANY_FACTS = [
     ("Название", "ООО «ИТ Вектура», ИНН 9701217858"),
-    ("Опыт", "Команда — 20+ лет в отрасли, компания на рынке — 15+ лет"),
+    ("Опыт", "Команда — 15+ лет опыта в отрасли"),
     ("R&D", "25+ разработчиков в собственной лаборатории"),
     ("Объём", "15 000+ заказов ежедневно обрабатывает система у клиентов"),
     ("Проекты", "15+ успешных проектов в ритейле и дистрибуции"),
@@ -148,7 +169,7 @@ CASES = [
 
 OBJECTIONS = [
     ("«Молодой продукт, страшно внедрять»",
-     "Команда — 20+ лет в отрасли, продукт строится на опыте SAP/Oracle. Уже 15 000+ заказов "
+     "Команда — 15+ лет опыта в отрасли, продукт строится на опыте SAP/Oracle. Уже 15 000+ заказов "
      "в день у действующих клиентов. Есть эталонное внедрение с полным enterprise-циклом."),
     ("«Дорого»",
      "Не называть цены на стенде. «Стоимость считается индивидуально под объём и модули — "
@@ -186,7 +207,7 @@ GLOSSARY = [
 ]
 
 FLASHCARDS = [
-    ("Сколько лет опыта у команды IT Vectura?", "20+ лет опыта команды в отрасли, сама компания на рынке 15+ лет."),
+    ("Сколько лет опыта у команды IT Vectura?", "15+ лет опыта команды в отрасли."),
     ("Сколько заказов в день обрабатывает система?", "15 000+ заказов ежедневно у действующих клиентов."),
     ("В каком реестре зарегистрированы продукты?", "В Едином реестре российского ПО (Минцифры РФ) и в Роспатенте."),
     ("Какой продукт самый готовый к продаже прямо сейчас?", "TMS — управление транспортом."),
@@ -206,8 +227,8 @@ FLASHCARDS = [
 
 QUIZ_QUESTIONS = [
     {"q": "Сколько лет опыта у команды IT Vectura в отрасли?",
-     "opts": ["15+ лет", "20+ лет", "10+ лет", "5+ лет"], "correct": 1,
-     "exp": "Команда — 20+ лет опыта в отрасли. Сама компания на рынке — 15+ лет."},
+     "opts": ["15+ лет", "20+ лет", "10+ лет", "5+ лет"], "correct": 0,
+     "exp": "Команда — 15+ лет опыта в отрасли."},
     {"q": "Какой продукт сейчас в активной разработке и НЕ готов как завершённый?",
      "opts": ["TMS", "Routing", "WMS", "FrameWork"], "correct": 2,
      "exp": "WMS в активной разработке — не выдавать за полностью готовый продукт."},
@@ -235,9 +256,7 @@ QUIZ_QUESTIONS = [
 ]
 
 
-# --------------------------------------------------------------------------
-# SESSION STATE — Python хранит состояние между кликами пользователя
-# --------------------------------------------------------------------------
+# --- session state ---
 if "fc_index" not in st.session_state:
     st.session_state.fc_index = 0
 if "fc_flipped" not in st.session_state:
@@ -250,11 +269,8 @@ if "quiz_answers" not in st.session_state:
     st.session_state.quiz_answers = {}
 
 
-# --------------------------------------------------------------------------
-# БОКОВОЕ МЕНЮ
-# --------------------------------------------------------------------------
+# --- sidebar nav ---
 st.sidebar.markdown("## IT VECTURA")
-st.sidebar.caption("Подготовка к CeMAT — Python / Streamlit")
 
 page = st.sidebar.radio(
     label="Разделы",
@@ -276,18 +292,14 @@ st.sidebar.markdown("---")
 st.sidebar.caption("CeMAT RUSSIA · тема стенда: IT-решения для складской и производственной логистики")
 
 
-# --------------------------------------------------------------------------
-# СТРАНИЦЫ
-# --------------------------------------------------------------------------
+# --- pages ---
 if page == "01 · Питч":
     st.title("Питч на 30 секунд")
-    st.caption("Если человек подошёл на 10 секунд — этого достаточно, дальше сразу спрашивайте, "
-               "что у него сейчас автоматизировано.")
     st.markdown("""
     <div class="pitch-box">
     <b>Что сказать:</b><br><br>
     «IT Vectura — российская платформа для управления логистикой: транспорт, склад, двор и терминал
-    в одной системе. 15+ лет автоматизируем логистику, входим в реестр отечественного ПО, система
+    в одной системе. Команда с опытом 15+ лет в отрасли, входим в реестр отечественного ПО, система
     уже обрабатывает 15 000+ заказов ежедневно у клиентов из ритейла и дистрибуции. Расскажите, как
     у вас сейчас устроена логистика — подскажу, какой модуль закроет вашу задачу.»
     </div>
@@ -310,7 +322,6 @@ elif page == "02 · О компании":
 
 elif page == "03 · Продукты":
     st.title("Продукты экосистемы")
-    st.caption("Все продукты построены на едином low-code конструкторе FrameWork.")
     cols = st.columns(2)
     for i, p in enumerate(PRODUCTS):
         with cols[i % 2]:
@@ -375,7 +386,6 @@ elif page == "07 · Глоссарий":
 
 elif page == "08 · Проверь себя":
     st.title("Проверь себя — флеш-карты")
-    st.caption("Нажмите «Показать ответ», затем «Следующая карточка».")
 
     idx = st.session_state.fc_order[st.session_state.fc_index]
     question, answer = FLASHCARDS[idx]
@@ -406,7 +416,6 @@ elif page == "08 · Проверь себя":
 
 elif page == "09 · Тест":
     st.title("Тест на знание продуктов")
-    st.caption("Ответьте на все вопросы и нажмите «Проверить результат» внизу.")
 
     with st.form("quiz_form"):
         for i, item in enumerate(QUIZ_QUESTIONS):
@@ -430,7 +439,7 @@ elif page == "09 · Тест":
         total = len(QUIZ_QUESTIONS)
         st.markdown("---")
         if score == total:
-            st.success(f"Результат: {score}/{total} — отлично! Полностью готовы к стенду.")
+            st.success(f"Результат: {score}/{total}. Готовы к стенду.")
         elif score >= total * 0.7:
             st.warning(f"Результат: {score}/{total} — хороший результат, повторите темы с ошибками.")
         else:
@@ -442,4 +451,4 @@ elif page == "09 · Тест":
             icon = "✔" if is_correct else "✘"
             with st.expander(f"{icon} Вопрос {i + 1}: {item['q']}"):
                 st.write(f"Правильный ответ: **{item['opts'][item['correct']]}**")
-                st.caption(item["exp"])
+                st.write(item["exp"])
