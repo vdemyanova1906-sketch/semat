@@ -81,7 +81,7 @@ st.markdown(f"""
     /* hide default Streamlit chrome — looks like a real product, not a template */
     #MainMenu {{ visibility: hidden; }}
     footer {{ visibility: hidden; }}
-    header[data-testid="stHeader"] {background: transparent; box-shadow:none; }
+    header[data-testid="stHeader"] {{background: transparent; box-shadow:none; }}
     .stAppDeployButton {{ display: none; }}
 
     /* mobile */
