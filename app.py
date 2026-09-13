@@ -1,4 +1,4 @@
-# app.py — internal prep tool for CeMAT booth duty
+# app.py обучалка IT Vectura, изначально шпаргалка к CeMAT
 # run: streamlit run app.py
 
 import base64
@@ -22,8 +22,8 @@ INK = "#1B2530"
 MUTED = "#5B6B78"
 LINE = "#E1E6EA"
 
-# тёмная тема — те же роли (фон, текст, акцент), другие значения.
-# сайдбар остаётся навy в обеих темах — это фирменный цвет, а не фон страницы
+
+
 DARK_BG = "#0E1620"
 DARK_CARD = "#16212C"
 DARK_INK = "#E7EEF3"
@@ -38,7 +38,7 @@ st.markdown(f"""
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-    /* --- цвета темы: одни и те же роли, разные значения для светлой/тёмной --- */
+    /* --- цвета темы */
     :root {{
         --bg: #F3F5F7; --card-bg: #ffffff;
         --ink: {INK}; --muted: {MUTED}; --line: {LINE};
@@ -73,7 +73,7 @@ st.markdown(f"""
     section[data-testid="stSidebar"] [role="radiogroup"] label:hover {{
         background: rgba(255,255,255,0.06);
     }}
-    /* визуальная граница между материалами (1-8) и проверкой знаний (9-10) */
+    /* разделитель этой хуйни блять в меню */
     section[data-testid="stSidebar"] [role="radiogroup"] label:nth-of-type(9) {{
         margin-top: 20px; padding-top: 16px;
         border-top: 1px solid rgba(255,255,255,0.14);
@@ -83,7 +83,7 @@ st.markdown(f"""
         content: "ПРОВЕРКА ЗНАНИЙ"; position: absolute; top: 2px; left: 6px;
         font-size: 10px; letter-spacing: 0.08em; color: rgba(255,255,255,0.4);
     }}
-    /* прогресс-бар в брендовых цветах вместо стандартного красного */
+    
     section[data-testid="stSidebar"] [data-testid="stProgress"] > div > div {{
         background: rgba(255,255,255,0.14);
     }}
@@ -91,9 +91,8 @@ st.markdown(f"""
         background: var(--amber);
     }}
 
-    /* content blocks — pitch-box и core-box всегда тёмно-синие с белым текстом, */
-    /* это фирменный акцентный блок, а не поверхность страницы — темы не меняют его */
-    .pitch-box {{
+    /* контент блок епта  */
+     {{
         background: {BRAND_BLUE}; color: #fff; padding: 26px 30px;
         border-radius: 4px; border-left: 4px solid var(--amber);
         font-size: 16.5px; line-height: 1.65;
@@ -143,7 +142,7 @@ st.markdown(f"""
     .core-value {{ font-size: 14px; color: #C9D6DF; margin-top: 2px; }}
     .core-plain {{ font-size: 14px; line-height: 1.55; margin-top: 10px; color: #E7EEF3; }}
 
-    /* "67" — награда за пройденный этап, отсылка к мему из TikTok с жестом рук вверх-вниз */
+    /* СИКСЕВЕЕЕЕЕЕЕЕЕН */
     .meme67 {{
         display: flex; justify-content: center; align-items: flex-end; gap: 28px;
         padding: 10px 0 4px; margin-bottom: 6px;
@@ -162,7 +161,7 @@ st.markdown(f"""
         50% {{ transform: translateY(-22px); }}
     }}
 
-    /* шкала результата теста — своя иллюстрация под каждый уровень, без чужих фото */
+    /* шкала результата */
     .score-scale {{
         background: var(--card-bg); border: 1px solid var(--line); border-radius: 4px;
         padding: 22px; text-align: center; margin-top: 22px;
@@ -173,7 +172,7 @@ st.markdown(f"""
     }}
     .score-scale .caption {{ font-size: 14px; color: var(--ink); margin-top: 10px; }}
 
-    /* всплывающая награда в углу экрана — крупнее стандартного st.toast */
+    /* всплывающая награда */
     .meme-popup {{
         position: fixed; bottom: 28px; right: 28px; z-index: 9999;
         background: var(--card-bg); border: 1px solid var(--line); border-radius: 10px;
@@ -373,7 +372,7 @@ COMPANY_FACTS = [
      "то, о чём спрашивают в первую очередь."),
 ]
 
-# бэкенд вынесен отдельно — это ядро платформы, остальное вокруг него
+
 TECH_CORE = {
     "title": "Backend и API — Go (Golang)",
     "value": "WebSockets / GraphQL / REST API",
@@ -614,7 +613,7 @@ PITCH_TEXT = (
     "какой модуль закроет вашу задачу.»"
 )
 
-# разбор: каждая часть питча решает свою задачу
+
 PITCH_BREAKDOWN = [
     ("«российская платформа: транспорт, склад, двор и терминал в одной системе»",
      "Первая фраза отвечает на вопрос «кто вы и что продаёте». Слово «российская» сразу "
@@ -809,7 +808,7 @@ QUIZ_QUESTIONS = [
      "exp": "Обещать нужно настраиваемость через low-code, а не любые доработки кодом."},
 ]
 
-# короткие реакции на пройденный раздел — награда за прогресс, не часть учебного текста
+
 PROGRESS_MEMES = [
     "Красавчик, погнали дальше",
     "Топ, раздел закрыт",
@@ -828,9 +827,7 @@ MEME_67_HTML = """
 </div>
 """
 
-# ниже — свои линейные иллюстрации (SVG), не чужие фото: для теста ниже 50%
-# цвета заданы через style=var(...), а не голыми атрибутами — только так SVG
-# подхватывает переключение темы наравне с остальной страницей
+# ниже свои линейные иллюстрации
 SAD_CAT_SVG = """
 <svg viewBox="0 0 120 120" width="88" height="88" fill="none" xmlns="http://www.w3.org/2000/svg">
     <path d="M30 45 Q30 20 60 20 Q90 20 90 45 L90 75 Q90 100 60 100 Q30 100 30 75 Z"
@@ -848,7 +845,7 @@ SAD_CAT_SVG = """
 </svg>
 """
 
-# карикатура-силуэт с ракетой — не фотография, обобщённый образ "к успеху", для теста 70%+
+
 ROCKET_GUY_SVG = """
 <svg viewBox="0 0 170 130" width="118" height="90" fill="none" xmlns="http://www.w3.org/2000/svg">
     <circle cx="55" cy="62" r="32" style="stroke:var(--ink)" stroke-width="3"/>
@@ -870,7 +867,7 @@ ROCKET_GUY_SVG = """
 
 
 def meme_popup_html(visual, text):
-    # склеиваем в одну строку — иначе Streamlit из-за отступов не рендерит вложенный HTML
+    # ЕСЛИ Я ТУПАЯ МРАЗЬ ЭТО УБЕРУ ТО СТРИМЛИТ СЛОМАЕТ ВЕРСТКУ ИЗ ЗА ОТСТУПОВ
     visual_flat = " ".join(visual.split())
     return (
         '<div class="meme-popup">'
@@ -880,8 +877,7 @@ def meme_popup_html(visual, text):
     )
 
 
-# картинки-мемы кладутся сюда самостоятельно (см. MEME_IMAGE_FILES ниже) —
-# их нет в репозитории по умолчанию, поэтому код должен спокойно работать без них
+
 MEME_ASSETS_DIR = "memes"
 MEME_IMAGE_FILES = ["cat_bro.png", "designers_programmers.webp"]
 
@@ -936,7 +932,7 @@ PAGE_LIST = [
 ]
 
 
-# --- session state ---
+
 if "fc_index" not in st.session_state:
     st.session_state.fc_index = 0
 if "fc_flipped" not in st.session_state:
@@ -955,7 +951,7 @@ if "celebrated_quiz" not in st.session_state:
     st.session_state.celebrated_quiz = False
 
 
-# --- sidebar nav ---
+
 st.sidebar.markdown("## IT VECTURA")
 
 page = st.sidebar.radio(
@@ -1242,8 +1238,7 @@ elif page == "10 · Тест":
             visual, caption = MEME_67_HTML, "Уже неплохо, но есть куда расти."
         else:
             visual, caption = ROCKET_GUY_SVG, "Топ, почти всё усвоено."
-        # склеиваем в одну строку без переносов — иначе Streamlit из-за отступов
-        # принимает часть вложенных <div> за код и не рендерит их как HTML
+        
         visual_flat = " ".join(visual.split())
         st.markdown(
             '<div class="score-scale"><div class="label">Шкала результата</div>'
