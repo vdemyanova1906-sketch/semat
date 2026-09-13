@@ -83,7 +83,7 @@ st.markdown(f"""
         content: "ПРОВЕРКА ЗНАНИЙ"; position: absolute; top: 2px; left: 6px;
         font-size: 10px; letter-spacing: 0.08em; color: rgba(255,255,255,0.4);
     }}
-    
+
     section[data-testid="stSidebar"] [data-testid="stProgress"] > div > div {{
         background: rgba(255,255,255,0.14);
     }}
@@ -92,7 +92,7 @@ st.markdown(f"""
     }}
 
     /* контент блок епта  */
-     {{
+    .pitch-box {{
         background: {BRAND_BLUE}; color: #fff; padding: 26px 30px;
         border-radius: 4px; border-left: 4px solid var(--amber);
         font-size: 16.5px; line-height: 1.65;
@@ -181,6 +181,7 @@ st.markdown(f"""
         max-width: 360px; pointer-events: none;
         animation: meme-popup-life 4.2s ease forwards;
     }}
+    .meme-popup.long {{ animation: meme-popup-life 10.5s ease forwards; }}
     .meme-popup .meme-popup-visual {{ flex-shrink: 0; transform: scale(0.7); }}
     .meme-popup .meme-popup-img {{
         flex-shrink: 0; max-width: 130px; max-height: 130px;
@@ -879,12 +880,21 @@ def meme_popup_html(visual, text):
 
 
 MEME_ASSETS_DIR = "memes"
-MEME_IMAGE_FILES = ["cat_bro.png", "designers_programmers.webp"]
+_MEME_EXTS = {"png", "jpg", "jpeg", "webp", "gif"}
 
 _MIME_BY_EXT = {
     "png": "image/png", "jpg": "image/jpeg", "jpeg": "image/jpeg",
     "webp": "image/webp", "gif": "image/gif",
 }
+
+
+def list_meme_files():
+    if not os.path.isdir(MEME_ASSETS_DIR):
+        return []
+    return sorted(
+        f for f in os.listdir(MEME_ASSETS_DIR)
+        if f.rsplit(".", 1)[-1].lower() in _MEME_EXTS
+    )
 
 
 @st.cache_data
@@ -899,23 +909,54 @@ def _meme_image_data_uri(filename):
     return f"data:{mime};base64,{b64}"
 
 
-def meme_image_popup_html(filename, text):
+def meme_image_popup_html(filename, text, long=False):
     uri = _meme_image_data_uri(filename)
     if not uri:
         return None
+    css_class = "meme-popup long" if long else "meme-popup"
     return (
-        '<div class="meme-popup">'
+        f'<div class="{css_class}">'
         f'<img class="meme-popup-img" src="{uri}">'
         f'<div class="meme-popup-text">{text}</div>'
         '</div>'
     )
 
 
+# картинки, у которых свой фиксированный подкол вместо рандомного из общего списка
+MEME_CAPTIONS = {
+    "images.jpeg": "Пока зумерок делает сторис, материал сам себя не выучил.",
+}
+
+
 def reward_popup_html(text):
     # берём картинку, если файл уже добавлен в репозиторий; иначе — свою SVG-иллюстрацию
-    candidates = [meme_image_popup_html(f, text) for f in MEME_IMAGE_FILES]
+    files = list_meme_files()
+    candidates = [meme_image_popup_html(f, MEME_CAPTIONS.get(f, text)) for f in files]
     candidates = [c for c in candidates if c] or [meme_popup_html(MEME_67_HTML, text)]
     return random.choice(candidates)
+
+
+FC_ANSWER_JOKES = [
+    "Понабирают зумеров, а они даже карточку не могут выучить.",
+    "Три раза подряд подглядываешь — это уже не флеш-карты, а угадайка.",
+    "Материал сам себя не запомнит, но ты старайся.",
+    "Опять сюда — а собеседование завтра, если что.",
+    "Ну хоть в этот раз своими словами вспомнил?",
+]
+
+
+# розыгрыш на каждое N-ное открытие раздела — не награда за прогресс, а просто стёб
+SURPRISE_EVERY_N_OPENS = 5
+
+
+def maybe_surprise_popup(open_count):
+    files = list_meme_files()
+    if not files or open_count % SURPRISE_EVERY_N_OPENS != 0:
+        return
+    picked = random.choice(files)
+    html = meme_image_popup_html(picked, MEME_CAPTIONS.get(picked, ""), long=True)
+    if html:
+        st.markdown(html, unsafe_allow_html=True)
 
 
 PAGE_LIST = [
@@ -939,6 +980,8 @@ if "fc_flipped" not in st.session_state:
     st.session_state.fc_flipped = False
 if "fc_order" not in st.session_state:
     st.session_state.fc_order = list(range(len(FLASHCARDS)))
+if "fc_popup_pending" not in st.session_state:
+    st.session_state.fc_popup_pending = None
 if "quiz_submitted" not in st.session_state:
     st.session_state.quiz_submitted = False
 if "quiz_answers" not in st.session_state:
@@ -949,6 +992,10 @@ if "celebrated_all" not in st.session_state:
     st.session_state.celebrated_all = False
 if "celebrated_quiz" not in st.session_state:
     st.session_state.celebrated_quiz = False
+if "last_page" not in st.session_state:
+    st.session_state.last_page = None
+if "page_open_count" not in st.session_state:
+    st.session_state.page_open_count = 0
 
 
 
@@ -964,6 +1011,11 @@ is_new_visit = page not in st.session_state.visited_pages
 st.session_state.visited_pages.add(page)
 done = len(st.session_state.visited_pages)
 
+page_changed = page != st.session_state.last_page
+st.session_state.last_page = page
+if page_changed:
+    st.session_state.page_open_count += 1
+
 st.sidebar.progress(done / len(PAGE_LIST))
 st.sidebar.caption(f"Прогресс обучения: {done} из {len(PAGE_LIST)} разделов")
 
@@ -974,8 +1026,11 @@ if done == len(PAGE_LIST) and not st.session_state.celebrated_all:
         reward_popup_html("Все разделы пройдены. " + random.choice(PROGRESS_MEMES)),
         unsafe_allow_html=True,
     )
-elif is_new_visit:
-    st.toast(random.choice(PROGRESS_MEMES), icon="🔥")
+else:
+    if is_new_visit:
+        st.toast(random.choice(PROGRESS_MEMES), icon="🔥")
+    if page_changed:
+        maybe_surprise_popup(st.session_state.page_open_count)
 
 st.sidebar.markdown("---")
 st.sidebar.caption("CeMAT RUSSIA · тема стенда: IT-решения для складской и производственной логистики")
@@ -1144,22 +1199,34 @@ elif page == "09 · Проверь себя":
     </div>
     """, unsafe_allow_html=True)
 
-    if st.session_state.fc_flipped:
-        st.success(answer)
+    answer_slot = st.empty()
 
     c1, c2, c3 = st.columns(3)
-    if c1.button("Показать ответ" if not st.session_state.fc_flipped else "Скрыть ответ"):
-        st.session_state.fc_flipped = not st.session_state.fc_flipped
+    show_clicked = c1.button("Показать ответ" if not st.session_state.fc_flipped else "Скрыть ответ")
+    next_clicked = c2.button("Следующая карточка →")
+    shuffle_clicked = c3.button("Перемешать")
+
+    if show_clicked:
+        turning_on = not st.session_state.fc_flipped
+        st.session_state.fc_flipped = turning_on
+        st.session_state.fc_popup_pending = random.choice(FC_ANSWER_JOKES) if turning_on else None
         st.rerun()
-    if c2.button("Следующая карточка →"):
+    if next_clicked:
         st.session_state.fc_index = (st.session_state.fc_index + 1) % len(FLASHCARDS)
         st.session_state.fc_flipped = False
         st.rerun()
-    if c3.button("Перемешать"):
+    if shuffle_clicked:
         random.shuffle(st.session_state.fc_order)
         st.session_state.fc_index = 0
         st.session_state.fc_flipped = False
         st.rerun()
+
+    if st.session_state.fc_flipped:
+        answer_slot.success(answer)
+
+    if st.session_state.get("fc_popup_pending"):
+        st.markdown(reward_popup_html(st.session_state.fc_popup_pending), unsafe_allow_html=True)
+        st.session_state.fc_popup_pending = None
 
 elif page == "10 · Тест":
     st.title("Тест на знание продуктов")
@@ -1238,7 +1305,7 @@ elif page == "10 · Тест":
             visual, caption = MEME_67_HTML, "Уже неплохо, но есть куда расти."
         else:
             visual, caption = ROCKET_GUY_SVG, "Топ, почти всё усвоено."
-        
+
         visual_flat = " ".join(visual.split())
         st.markdown(
             '<div class="score-scale"><div class="label">Шкала результата</div>'
