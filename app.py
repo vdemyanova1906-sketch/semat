@@ -1,6 +1,8 @@
 # app.py — internal prep tool for CeMAT booth duty
 # run: streamlit run app.py
 
+import base64
+import os
 import random
 import streamlit as st
 
@@ -20,14 +22,43 @@ INK = "#1B2530"
 MUTED = "#5B6B78"
 LINE = "#E1E6EA"
 
+# тёмная тема — те же роли (фон, текст, акцент), другие значения.
+# сайдбар остаётся навy в обеих темах — это фирменный цвет, а не фон страницы
+DARK_BG = "#0E1620"
+DARK_CARD = "#16212C"
+DARK_INK = "#E7EEF3"
+DARK_MUTED = "#8CA0AD"
+DARK_LINE = "#28394A"
+DARK_BLUE = "#5FA8E0"
+DARK_AMBER = "#F0A93E"
+DARK_AMBER_BG = "#3A2B14"
+DARK_AMBER_TEXT = "#F6D9A6"
+
 st.markdown(f"""
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-    html, body, [class*="css"] {{ font-family: 'Inter', sans-serif; }}
-    h1, h2, h3 {{ font-family: 'Space Grotesk', sans-serif; color: {BRAND_BLUE}; letter-spacing: -0.01em; }}
+    /* --- цвета темы: одни и те же роли, разные значения для светлой/тёмной --- */
+    :root {{
+        --bg: #F3F5F7; --card-bg: #ffffff;
+        --ink: {INK}; --muted: {MUTED}; --line: {LINE};
+        --blue: {BRAND_BLUE}; --amber: {BRAND_AMBER};
+        --amber-bg: {BRAND_AMBER_LIGHT}; --amber-text: #5A4319;
+    }}
+    @media (prefers-color-scheme: dark) {{
+        :root {{
+            --bg: {DARK_BG}; --card-bg: {DARK_CARD};
+            --ink: {DARK_INK}; --muted: {DARK_MUTED}; --line: {DARK_LINE};
+            --blue: {DARK_BLUE}; --amber: {DARK_AMBER};
+            --amber-bg: {DARK_AMBER_BG}; --amber-text: {DARK_AMBER_TEXT};
+        }}
+    }}
 
-    .stApp {{ background-color: #F3F5F7; }}
+    html, body, [class*="css"] {{ font-family: 'Inter', sans-serif; }}
+    h1, h2, h3 {{ font-family: 'Space Grotesk', sans-serif; color: var(--blue); letter-spacing: -0.01em; }}
+    p, span, li, label {{ color: var(--ink); }}
+
+    .stApp {{ background-color: var(--bg); }}
     .block-container {{ padding-top: 2.2rem; max-width: 1080px; }}
 
     section[data-testid="stSidebar"] {{ background-color: {BRAND_NAVY}; }}
@@ -42,41 +73,70 @@ st.markdown(f"""
     section[data-testid="stSidebar"] [role="radiogroup"] label:hover {{
         background: rgba(255,255,255,0.06);
     }}
+    /* визуальная граница между материалами (1-8) и проверкой знаний (9-10) */
+    section[data-testid="stSidebar"] [role="radiogroup"] label:nth-of-type(9) {{
+        margin-top: 20px; padding-top: 16px;
+        border-top: 1px solid rgba(255,255,255,0.14);
+        position: relative;
+    }}
+    section[data-testid="stSidebar"] [role="radiogroup"] label:nth-of-type(9)::before {{
+        content: "ПРОВЕРКА ЗНАНИЙ"; position: absolute; top: 2px; left: 6px;
+        font-size: 10px; letter-spacing: 0.08em; color: rgba(255,255,255,0.4);
+    }}
+    /* прогресс-бар в брендовых цветах вместо стандартного красного */
+    section[data-testid="stSidebar"] [data-testid="stProgress"] > div > div {{
+        background: rgba(255,255,255,0.14);
+    }}
+    section[data-testid="stSidebar"] [data-testid="stProgress"] > div > div > div {{
+        background: var(--amber);
+    }}
 
-    /* content blocks */
+    /* content blocks — pitch-box и core-box всегда тёмно-синие с белым текстом, */
+    /* это фирменный акцентный блок, а не поверхность страницы — темы не меняют его */
     .pitch-box {{
         background: {BRAND_BLUE}; color: #fff; padding: 26px 30px;
-        border-radius: 4px; border-left: 4px solid {BRAND_AMBER};
+        border-radius: 4px; border-left: 4px solid var(--amber);
         font-size: 16.5px; line-height: 1.65;
     }}
     .tip-box {{
-        background: {BRAND_AMBER_LIGHT}; border-left: 3px solid {BRAND_AMBER};
-        padding: 14px 18px; font-size: 14px; color: #5A4319; margin-top: 14px;
+        background: var(--amber-bg); border-left: 3px solid var(--amber);
+        padding: 14px 18px; font-size: 14px; color: var(--amber-text); margin-top: 14px;
     }}
     .fact-card {{
-        background: #fff; border: 1px solid {LINE}; border-left: 3px solid {BRAND_BLUE};
-        padding: 13px 18px; margin-bottom: 9px;
+        background: var(--card-bg); border: 1px solid var(--line);
+        border-left: 3px solid var(--blue);
+        padding: 13px 18px; margin-bottom: 9px; border-radius: 4px;
+        box-shadow: 0 1px 3px rgba(11,42,61,0.05);
+        transition: box-shadow 0.15s ease, transform 0.15s ease;
+    }}
+    .fact-card:hover {{
+        box-shadow: 0 6px 16px rgba(11,42,61,0.10); transform: translateY(-1px);
     }}
     .fact-card .k {{
-        font-size: 11px; color: {MUTED}; font-weight: 600; letter-spacing: 0.06em;
+        font-size: 11px; color: var(--muted); font-weight: 600; letter-spacing: 0.06em;
     }}
-    .fact-card .v {{ font-size: 15px; margin-top: 3px; color: {INK}; }}
+    .fact-card .v {{ font-size: 15px; margin-top: 3px; color: var(--ink); }}
     .fact-card .w {{
-        font-size: 13px; margin-top: 7px; color: {MUTED}; line-height: 1.5;
-        border-top: 1px solid {LINE}; padding-top: 7px;
+        font-size: 13px; margin-top: 7px; color: var(--muted); line-height: 1.5;
+        border-top: 1px solid var(--line); padding-top: 7px;
     }}
     .term-row {{
-        background: #fff; border: 1px solid {LINE}; border-left: 3px solid {BRAND_BLUE};
+        background: var(--card-bg); border: 1px solid var(--line);
+        border-left: 3px solid var(--blue);
         padding: 11px 16px; margin-bottom: 7px; font-size: 14.5px; line-height: 1.55;
-        color: {INK};
+        color: var(--ink); border-radius: 4px; box-shadow: 0 1px 3px rgba(11,42,61,0.05);
+        transition: box-shadow 0.15s ease, transform 0.15s ease;
     }}
-    .term-row b {{ color: {BRAND_BLUE}; }}
+    .term-row:hover {{
+        box-shadow: 0 6px 16px rgba(11,42,61,0.10); transform: translateY(-1px);
+    }}
+    .term-row b {{ color: var(--blue); }}
     .core-box {{
         background: {BRAND_NAVY}; color: #fff; padding: 20px 24px;
-        border-radius: 4px; border-left: 4px solid {BRAND_AMBER}; margin-bottom: 18px;
+        border-radius: 4px; border-left: 4px solid var(--amber); margin-bottom: 18px;
     }}
     .core-label {{
-        font-size: 11px; color: {BRAND_AMBER}; font-weight: 700;
+        font-size: 11px; color: var(--amber); font-weight: 700;
         text-transform: uppercase; letter-spacing: 0.08em;
     }}
     .core-title {{ font-size: 19px; font-weight: 700; margin-top: 6px; }}
@@ -95,7 +155,7 @@ st.markdown(f"""
     .meme67 .hand.right {{ animation-direction: reverse; }}
     .meme67 .num {{
         font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 22px;
-        color: {BRAND_AMBER};
+        color: var(--amber);
     }}
     @keyframes meme67-seesaw {{
         0%, 100% {{ transform: translateY(0); }}
@@ -104,23 +164,49 @@ st.markdown(f"""
 
     /* шкала результата теста — своя иллюстрация под каждый уровень, без чужих фото */
     .score-scale {{
-        background: #fff; border: 1px solid {LINE}; border-radius: 4px;
+        background: var(--card-bg); border: 1px solid var(--line); border-radius: 4px;
         padding: 22px; text-align: center; margin-top: 22px;
     }}
     .score-scale .label {{
-        font-size: 11px; color: {MUTED}; font-weight: 600; letter-spacing: 0.06em;
+        font-size: 11px; color: var(--muted); font-weight: 600; letter-spacing: 0.06em;
         text-transform: uppercase; margin-bottom: 10px;
     }}
-    .score-scale .caption {{ font-size: 14px; color: {INK}; margin-top: 10px; }}
+    .score-scale .caption {{ font-size: 14px; color: var(--ink); margin-top: 10px; }}
+
+    /* всплывающая награда в углу экрана — крупнее стандартного st.toast */
+    .meme-popup {{
+        position: fixed; bottom: 28px; right: 28px; z-index: 9999;
+        background: var(--card-bg); border: 1px solid var(--line); border-radius: 10px;
+        box-shadow: 0 14px 36px rgba(11,42,61,0.24);
+        padding: 16px 22px; display: flex; align-items: center; gap: 16px;
+        max-width: 360px; pointer-events: none;
+        animation: meme-popup-life 4.2s ease forwards;
+    }}
+    .meme-popup .meme-popup-visual {{ flex-shrink: 0; transform: scale(0.7); }}
+    .meme-popup .meme-popup-img {{
+        flex-shrink: 0; max-width: 130px; max-height: 130px;
+        border-radius: 8px; object-fit: cover;
+    }}
+    .meme-popup .meme-popup-text {{
+        font-size: 15px; font-weight: 600; color: var(--ink); line-height: 1.4;
+    }}
+    @keyframes meme-popup-life {{
+        0%   {{ transform: translateX(140%); opacity: 0; }}
+        10%  {{ transform: translateX(0); opacity: 1; }}
+        85%  {{ transform: translateX(0); opacity: 1; }}
+        100% {{ transform: translateX(24px); opacity: 0; }}
+    }}
     .case-card {{
-        background: #fff; border: 1px solid {LINE}; padding: 18px 22px 20px; margin-bottom: 14px;
+        background: var(--card-bg); border: 1px solid var(--line);
+        padding: 18px 22px 20px; margin-bottom: 14px;
+        border-radius: 4px; box-shadow: 0 2px 6px rgba(11,42,61,0.06);
     }}
     .case-role {{
-        font-size: 11px; color: {BRAND_AMBER}; font-weight: 700;
+        font-size: 11px; color: var(--amber); font-weight: 700;
         text-transform: uppercase; letter-spacing: 0.08em;
     }}
     .case-card .case-label {{
-        font-size: 11px; color: {MUTED}; font-weight: 600; letter-spacing: 0.06em;
+        font-size: 11px; color: var(--muted); font-weight: 600; letter-spacing: 0.06em;
         text-transform: uppercase; margin-top: 16px; margin-bottom: 5px;
     }}
     .case-card ul {{ margin: 5px 0 0 0; padding-left: 20px; }}
@@ -128,11 +214,18 @@ st.markdown(f"""
 
     /* buttons: flatten the default Streamlit look */
     .stButton button {{
-        border-radius: 4px; border: 1px solid {LINE}; font-weight: 500;
+        border-radius: 4px; border: 1px solid var(--line); font-weight: 500;
+        background: var(--card-bg); color: var(--ink);
     }}
-    .stButton button:hover {{ border-color: {BRAND_BLUE}; color: {BRAND_BLUE}; }}
+    .stButton button:hover {{ border-color: var(--blue); color: var(--blue); }}
 
-    div[data-testid="stExpander"] {{ border: 1px solid {LINE}; border-radius: 4px; }}
+    div[data-testid="stExpander"] {{
+        border: 1px solid var(--line); border-radius: 6px;
+        background: var(--card-bg);
+        box-shadow: 0 1px 3px rgba(11,42,61,0.05);
+        transition: box-shadow 0.15s ease;
+    }}
+    div[data-testid="stExpander"]:hover {{ box-shadow: 0 4px 12px rgba(11,42,61,0.09); }}
 
     /* hide default Streamlit chrome — looks like a real product, not a template */
     #MainMenu {{ visibility: hidden; }}
@@ -736,42 +829,98 @@ MEME_67_HTML = """
 """
 
 # ниже — свои линейные иллюстрации (SVG), не чужие фото: для теста ниже 50%
-SAD_CAT_SVG = f"""
+# цвета заданы через style=var(...), а не голыми атрибутами — только так SVG
+# подхватывает переключение темы наравне с остальной страницей
+SAD_CAT_SVG = """
 <svg viewBox="0 0 120 120" width="88" height="88" fill="none" xmlns="http://www.w3.org/2000/svg">
     <path d="M30 45 Q30 20 60 20 Q90 20 90 45 L90 75 Q90 100 60 100 Q30 100 30 75 Z"
-          stroke="{MUTED}" stroke-width="3"/>
-    <path d="M32 40 L20 15 L45 30 Z" stroke="{MUTED}" stroke-width="3" stroke-linejoin="round"/>
-    <path d="M88 40 L100 15 L75 30 Z" stroke="{MUTED}" stroke-width="3" stroke-linejoin="round"/>
-    <path d="M45 55 Q50 62 55 55" stroke="{INK}" stroke-width="3" stroke-linecap="round"/>
-    <path d="M65 55 Q70 62 75 55" stroke="{INK}" stroke-width="3" stroke-linecap="round"/>
-    <path d="M52 80 Q60 71 68 80" stroke="{INK}" stroke-width="3" stroke-linecap="round" fill="none"/>
+          style="stroke:var(--muted)" stroke-width="3"/>
+    <path d="M32 40 L20 15 L45 30 Z" style="stroke:var(--muted)" stroke-width="3" stroke-linejoin="round"/>
+    <path d="M88 40 L100 15 L75 30 Z" style="stroke:var(--muted)" stroke-width="3" stroke-linejoin="round"/>
+    <path d="M45 55 Q50 62 55 55" style="stroke:var(--ink)" stroke-width="3" stroke-linecap="round"/>
+    <path d="M65 55 Q70 62 75 55" style="stroke:var(--ink)" stroke-width="3" stroke-linecap="round"/>
+    <path d="M52 80 Q60 71 68 80" style="stroke:var(--ink)" stroke-width="3" stroke-linecap="round" fill="none"/>
     <path d="M47 60 Q43 69 47 76 Q51 69 47 60 Z" fill="#8FB6D9"/>
-    <line x1="18" y1="65" x2="34" y2="63" stroke="{LINE}" stroke-width="2"/>
-    <line x1="18" y1="72" x2="34" y2="72" stroke="{LINE}" stroke-width="2"/>
-    <line x1="102" y1="65" x2="86" y2="63" stroke="{LINE}" stroke-width="2"/>
-    <line x1="102" y1="72" x2="86" y2="72" stroke="{LINE}" stroke-width="2"/>
+    <line x1="18" y1="65" x2="34" y2="63" style="stroke:var(--line)" stroke-width="2"/>
+    <line x1="18" y1="72" x2="34" y2="72" style="stroke:var(--line)" stroke-width="2"/>
+    <line x1="102" y1="65" x2="86" y2="63" style="stroke:var(--line)" stroke-width="2"/>
+    <line x1="102" y1="72" x2="86" y2="72" style="stroke:var(--line)" stroke-width="2"/>
 </svg>
 """
 
 # карикатура-силуэт с ракетой — не фотография, обобщённый образ "к успеху", для теста 70%+
-ROCKET_GUY_SVG = f"""
+ROCKET_GUY_SVG = """
 <svg viewBox="0 0 170 130" width="118" height="90" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <circle cx="55" cy="62" r="32" stroke="{INK}" stroke-width="3"/>
-    <path d="M25 52 Q35 26 55 28 Q75 24 87 50" stroke="{INK}" stroke-width="3"
+    <circle cx="55" cy="62" r="32" style="stroke:var(--ink)" stroke-width="3"/>
+    <path d="M25 52 Q35 26 55 28 Q75 24 87 50" style="stroke:var(--ink)" stroke-width="3"
           stroke-linecap="round" fill="none"/>
-    <circle cx="45" cy="60" r="2.5" fill="{INK}"/>
-    <circle cx="66" cy="60" r="2.5" fill="{INK}"/>
-    <path d="M42 75 Q55 84 71 72" stroke="{INK}" stroke-width="3" stroke-linecap="round" fill="none"/>
+    <circle cx="45" cy="60" r="2.5" style="fill:var(--ink)"/>
+    <circle cx="66" cy="60" r="2.5" style="fill:var(--ink)"/>
+    <path d="M42 75 Q55 84 71 72" style="stroke:var(--ink)" stroke-width="3" stroke-linecap="round" fill="none"/>
     <g transform="translate(118,8) rotate(35)">
         <path d="M12 0 C19 9 21 24 19 38 L5 38 C3 24 5 9 12 0 Z"
-              stroke="{BRAND_BLUE}" stroke-width="2.5" fill="#fff"/>
-        <circle cx="12" cy="16" r="4" fill="{BRAND_BLUE}"/>
-        <path d="M5 30 L-6 40 L5 37 Z" fill="{BRAND_AMBER}"/>
-        <path d="M19 30 L30 40 L19 37 Z" fill="{BRAND_AMBER}"/>
-        <path d="M7 38 L12 52 L17 38 Z" fill="{BRAND_AMBER}"/>
+              style="stroke:var(--blue)" stroke-width="2.5" fill="#fff"/>
+        <circle cx="12" cy="16" r="4" style="fill:var(--blue)"/>
+        <path d="M5 30 L-6 40 L5 37 Z" style="fill:var(--amber)"/>
+        <path d="M19 30 L30 40 L19 37 Z" style="fill:var(--amber)"/>
+        <path d="M7 38 L12 52 L17 38 Z" style="fill:var(--amber)"/>
     </g>
 </svg>
 """
+
+
+def meme_popup_html(visual, text):
+    # склеиваем в одну строку — иначе Streamlit из-за отступов не рендерит вложенный HTML
+    visual_flat = " ".join(visual.split())
+    return (
+        '<div class="meme-popup">'
+        f'<div class="meme-popup-visual">{visual_flat}</div>'
+        f'<div class="meme-popup-text">{text}</div>'
+        '</div>'
+    )
+
+
+# картинки-мемы кладутся сюда самостоятельно (см. MEME_IMAGE_FILES ниже) —
+# их нет в репозитории по умолчанию, поэтому код должен спокойно работать без них
+MEME_ASSETS_DIR = "memes"
+MEME_IMAGE_FILES = ["cat_bro.png", "designers_programmers.webp"]
+
+_MIME_BY_EXT = {
+    "png": "image/png", "jpg": "image/jpeg", "jpeg": "image/jpeg",
+    "webp": "image/webp", "gif": "image/gif",
+}
+
+
+@st.cache_data
+def _meme_image_data_uri(filename):
+    path = os.path.join(MEME_ASSETS_DIR, filename)
+    if not os.path.exists(path):
+        return None
+    ext = filename.rsplit(".", 1)[-1].lower()
+    mime = _MIME_BY_EXT.get(ext, "image/jpeg")
+    with open(path, "rb") as f:
+        b64 = base64.b64encode(f.read()).decode("ascii")
+    return f"data:{mime};base64,{b64}"
+
+
+def meme_image_popup_html(filename, text):
+    uri = _meme_image_data_uri(filename)
+    if not uri:
+        return None
+    return (
+        '<div class="meme-popup">'
+        f'<img class="meme-popup-img" src="{uri}">'
+        f'<div class="meme-popup-text">{text}</div>'
+        '</div>'
+    )
+
+
+def reward_popup_html(text):
+    # берём картинку, если файл уже добавлен в репозиторий; иначе — свою SVG-иллюстрацию
+    candidates = [meme_image_popup_html(f, text) for f in MEME_IMAGE_FILES]
+    candidates = [c for c in candidates if c] or [meme_popup_html(MEME_67_HTML, text)]
+    return random.choice(candidates)
+
 
 PAGE_LIST = [
     "01 · Питч",
@@ -781,9 +930,9 @@ PAGE_LIST = [
     "05 · Кейсы",
     "06 · Возражения",
     "07 · Глоссарий",
-    "08 · Проверь себя",
-    "09 · Тест",
-    "10 · Технологии",
+    "08 · Технологии",
+    "09 · Проверь себя",
+    "10 · Тест",
 ]
 
 
@@ -825,8 +974,10 @@ st.sidebar.caption(f"Прогресс обучения: {done} из {len(PAGE_LI
 if done == len(PAGE_LIST) and not st.session_state.celebrated_all:
     st.session_state.celebrated_all = True
     st.balloons()
-    st.markdown(MEME_67_HTML, unsafe_allow_html=True)
-    st.toast("Все разделы пройдены. " + random.choice(PROGRESS_MEMES), icon="🎉")
+    st.markdown(
+        reward_popup_html("Все разделы пройдены. " + random.choice(PROGRESS_MEMES)),
+        unsafe_allow_html=True,
+    )
 elif is_new_visit:
     st.toast(random.choice(PROGRESS_MEMES), icon="🔥")
 
@@ -955,7 +1106,36 @@ elif page == "07 · Глоссарий":
     if query and found == 0:
         st.warning("Ничего не найдено. Попробуйте другое слово.")
 
-elif page == "08 · Проверь себя":
+elif page == "08 · Технологии":
+    st.title("Технологический стек")
+    st.write(
+        "Полностью импортозамещённый стек, без привязки к иностранным вендорам. "
+        "Под каждой технологией — объяснение, за что она отвечает."
+    )
+
+    st.markdown(f"""
+    <div class="core-box">
+        <div class="core-label">Основа платформы</div>
+        <div class="core-title">{TECH_CORE['title']}</div>
+        <div class="core-value">{TECH_CORE['value']}</div>
+        <div class="core-plain">{TECH_CORE['plain']}</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    st.subheader("Остальные компоненты")
+    col1, col2 = st.columns(2)
+    for i, (k, v, plain) in enumerate(TECH_STACK):
+        target = col1 if i % 2 == 0 else col2
+        target.markdown(f'<div class="fact-card"><div class="k">{k.upper()}</div>'
+                         f'<div class="v">{v}</div><div class="w">{plain}</div></div>',
+                        unsafe_allow_html=True)
+
+    st.subheader("Информационная безопасность")
+    for line in TECH_SECURITY:
+        st.markdown(f"- {line}")
+
+
+elif page == "09 · Проверь себя":
     st.title("Проверь себя — флеш-карты")
 
     idx = st.session_state.fc_order[st.session_state.fc_index]
@@ -985,7 +1165,7 @@ elif page == "08 · Проверь себя":
         st.session_state.fc_flipped = False
         st.rerun()
 
-elif page == "09 · Тест":
+elif page == "10 · Тест":
     st.title("Тест на знание продуктов")
 
     if not st.session_state.quiz_submitted:
@@ -1027,7 +1207,10 @@ elif page == "09 · Тест":
             if not st.session_state.celebrated_quiz:
                 st.session_state.celebrated_quiz = True
                 st.balloons()
-                st.markdown(MEME_67_HTML, unsafe_allow_html=True)
+                st.markdown(
+                    reward_popup_html("Идеальный результат. " + random.choice(PROGRESS_MEMES)),
+                    unsafe_allow_html=True,
+                )
         elif score >= total * 0.7:
             st.warning(f"Результат: {score}/{total} — хороший результат, повторите темы с ошибками.")
         else:
@@ -1067,31 +1250,3 @@ elif page == "09 · Тест":
             f'{visual_flat}<div class="caption">{caption}</div></div>',
             unsafe_allow_html=True,
         )
-
-elif page == "10 · Технологии":
-    st.title("Технологический стек")
-    st.write(
-        "Полностью импортозамещённый стек, без привязки к иностранным вендорам. "
-        "Под каждой технологией — объяснение, за что она отвечает."
-    )
-
-    st.markdown(f"""
-    <div class="core-box">
-        <div class="core-label">Основа платформы</div>
-        <div class="core-title">{TECH_CORE['title']}</div>
-        <div class="core-value">{TECH_CORE['value']}</div>
-        <div class="core-plain">{TECH_CORE['plain']}</div>
-    </div>
-    """, unsafe_allow_html=True)
-
-    st.subheader("Остальные компоненты")
-    col1, col2 = st.columns(2)
-    for i, (k, v, plain) in enumerate(TECH_STACK):
-        target = col1 if i % 2 == 0 else col2
-        target.markdown(f'<div class="fact-card"><div class="k">{k.upper()}</div>'
-                         f'<div class="v">{v}</div><div class="w">{plain}</div></div>',
-                        unsafe_allow_html=True)
-
-    st.subheader("Информационная безопасность")
-    for line in TECH_SECURITY:
-        st.markdown(f"- {line}")
